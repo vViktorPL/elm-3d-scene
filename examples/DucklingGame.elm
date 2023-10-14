@@ -656,6 +656,7 @@ viewRunning model =
             , walls
             , water
             ]
+        , visibility = Scene3d.clearView
         }
 
 

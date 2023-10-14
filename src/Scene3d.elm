@@ -18,6 +18,7 @@ module Scene3d exposing
     , placeIn, relativeTo
     , triangleShadow, quadShadow, blockShadow, sphereShadow, cylinderShadow, coneShadow, meshShadow
     , composite, toWebGLEntities
+    , clearView, fog
     )
 
 {-| Top-level functionality for rendering a 3D scene.
@@ -643,6 +644,16 @@ relativeTo : Frame3d Meters coordinates { defines : localCoordinates } -> Entity
 relativeTo frame entity =
     Entity.relativeTo frame entity
 
+type Visibility
+    = ClearView
+    | Fog Length
+
+clearView : Visibility
+clearView = ClearView
+
+fog : Length -> Visibility
+fog visibilityDistance =
+    Fog visibilityDistance
 
 {-| A `Lights` value represents the set of all lights in a scene. There are a
 couple of current limitations to note in `elm-3d-scene`:
@@ -1424,6 +1435,8 @@ toWebGLEntities :
     , whiteBalance : Chromaticity
     , aspectRatio : Float
     , supersampling : Float
+    , visibility : Visibility
+    , backgroundColor : Color
     , entities : List (Entity coordinates)
     }
     -> List WebGL.Entity
@@ -1529,19 +1542,27 @@ toWebGLEntities arguments =
                         HableFilmicToneMapping ->
                             ( 5, 0 )
 
+                backgroundColorRgba = Color.toRgba arguments.backgroundColor
+                backgroundColorR = backgroundColorRgba.red
+                backgroundColorG = backgroundColorRgba.green
+                backgroundColorB = backgroundColorRgba.blue
+
                 -- ## Overall scene Properties
                 --
-                -- [ *  cameraX         whiteR  supersampling ]
-                -- [ *  cameraY         whiteG  sceneDiameter ]
-                -- [ *  cameraZ         whiteB  toneMapType   ]
-                -- [ *  projectionType  *       toneMapParam  ]
+                -- [ backgroundColorR   cameraX         whiteR  supersampling ]
+                -- [ backgroundColorG   cameraY         whiteG  sceneDiameter ]
+                -- [ backgroundColorB   cameraZ         whiteB  toneMapType   ]
+                -- [ fogDistance        projectionType  *       toneMapParam  ]
                 --
                 sceneProperties =
                     Math.Matrix4.fromRecord
-                        { m11 = 0
-                        , m21 = 0
-                        , m31 = 0
-                        , m41 = 0
+                        { m11 = backgroundColorR
+                        , m21 = backgroundColorG
+                        , m31 = backgroundColorB
+                        , m41 =
+                            case arguments.visibility of
+                                ClearView -> 0
+                                Fog distance -> Length.inMeters distance
                         , m12 = eyePointOrDirectionToCamera.x
                         , m22 = eyePointOrDirectionToCamera.y
                         , m32 = eyePointOrDirectionToCamera.z
@@ -1685,6 +1706,7 @@ custom :
     , antialiasing : Antialiasing
     , dimensions : ( Quantity Int Pixels, Quantity Int Pixels )
     , background : Background coordinates
+    , visibility : Visibility
     , entities : List (Entity coordinates)
     }
     -> Html msg
@@ -1695,6 +1717,7 @@ custom arguments =
         , antialiasing = arguments.antialiasing
         , dimensions = arguments.dimensions
         , background = arguments.background
+        , visibility = arguments.visibility
         }
         [ { lights = arguments.lights
           , exposure = arguments.exposure
@@ -1721,6 +1744,7 @@ composite :
     , antialiasing : Antialiasing
     , dimensions : ( Quantity Int Pixels, Quantity Int Pixels )
     , background : Background coordinates
+    , visibility : Visibility
     }
     ->
         List
@@ -1790,6 +1814,10 @@ composite arguments scenes =
                             , whiteBalance = scene.whiteBalance
                             , aspectRatio = aspectRatio
                             , supersampling = scalingFactor
+                            , visibility = arguments.visibility
+                            , backgroundColor =
+                                case arguments.background of
+                                    BackgroundColor color -> color
                             , entities = scene.entities
                             }
                     )
@@ -2068,6 +2096,7 @@ unlit arguments =
         , dimensions = arguments.dimensions
         , background = arguments.background
         , toneMapping = noToneMapping
+        , visibility = ClearView
         , entities = arguments.entities
         }
 
@@ -2090,6 +2119,7 @@ sunny :
     , camera : Camera3d Meters coordinates
     , clipDepth : Length
     , background : Background coordinates
+    , visibility : Visibility
     , entities : List (Entity coordinates)
     }
     -> Html msg
@@ -2129,6 +2159,7 @@ sunny arguments =
         , antialiasing = multisampling
         , dimensions = arguments.dimensions
         , background = arguments.background
+        , visibility = arguments.visibility
         , entities = arguments.entities
         }
 
@@ -2156,6 +2187,7 @@ cloudy :
     , camera : Camera3d Meters coordinates
     , clipDepth : Length
     , background : Background coordinates
+    , visibility : Visibility
     , entities : List (Entity coordinates)
     }
     -> Html msg
@@ -2177,5 +2209,6 @@ cloudy arguments =
         , antialiasing = multisampling
         , dimensions = arguments.dimensions
         , background = arguments.background
+        , visibility = arguments.visibility
         , entities = arguments.entities
         }

@@ -53,7 +53,8 @@ plainVertex :
             , projectionMatrix : Mat4
             , sceneProperties : Mat4
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 plainVertex =
     [glsl|
         precision highp float;
@@ -66,6 +67,8 @@ plainVertex =
         uniform highp mat4 projectionMatrix;
         uniform highp mat4 sceneProperties;
         
+        varying highp vec3 interpolatedPosition;
+        
         vec4 getWorldPosition(vec3 modelPosition, vec4 modelScale, mat4 modelMatrix) {
             vec4 scaledPosition = vec4(modelScale.xyz * modelPosition, 1.0);
             return modelMatrix * scaledPosition;
@@ -73,6 +76,7 @@ plainVertex =
         
         void main () {
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
         }
     |]
@@ -91,7 +95,8 @@ unlitVertex :
             , projectionMatrix : Mat4
             , sceneProperties : Mat4
         }
-        { interpolatedUv : Vec2
+        { interpolatedPosition : Vec3
+        , interpolatedUv : Vec2
         }
 unlitVertex =
     [glsl|
@@ -106,6 +111,7 @@ unlitVertex =
         uniform highp mat4 projectionMatrix;
         uniform highp mat4 sceneProperties;
         
+        varying highp vec3 interpolatedPosition;
         varying mediump vec2 interpolatedUv;
         
         vec4 getWorldPosition(vec3 modelPosition, vec4 modelScale, mat4 modelMatrix) {
@@ -115,6 +121,7 @@ unlitVertex =
         
         void main() {
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
             interpolatedUv = uv;
         }
@@ -334,7 +341,8 @@ singlePointVertex :
             , sceneProperties : Mat4
             , pointPosition : Vec3
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 singlePointVertex =
     [glsl|
         precision highp float;
@@ -349,6 +357,8 @@ singlePointVertex =
         uniform highp mat4 sceneProperties;
         uniform highp vec3 pointPosition;
         
+        varying highp vec3 interpolatedPosition;
+        
         vec4 getWorldPosition(vec3 modelPosition, vec4 modelScale, mat4 modelMatrix) {
             vec4 scaledPosition = vec4(modelScale.xyz * modelPosition, 1.0);
             return modelMatrix * scaledPosition;
@@ -356,6 +366,7 @@ singlePointVertex =
         
         void main () {
             vec4 worldPosition = getWorldPosition(pointPosition, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
             float supersampling = sceneProperties[3][0];
             gl_PointSize = 2.0 * pointRadius * supersampling * dummyAttribute + 2.0;
@@ -377,7 +388,8 @@ lineSegmentVertex :
             , lineSegmentStartPoint : Vec3
             , lineSegmentEndPoint : Vec3
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 lineSegmentVertex =
     [glsl|
         precision highp float;
@@ -392,6 +404,8 @@ lineSegmentVertex =
         uniform highp vec3 lineSegmentStartPoint;
         uniform highp vec3 lineSegmentEndPoint;
         
+        varying highp vec3 interpolatedPosition;
+        
         vec4 getWorldPosition(vec3 modelPosition, vec4 modelScale, mat4 modelMatrix) {
             vec4 scaledPosition = vec4(modelScale.xyz * modelPosition, 1.0);
             return modelMatrix * scaledPosition;
@@ -400,6 +414,7 @@ lineSegmentVertex =
         void main() {
             vec3 position = (1.0 - lineSegmentVertex) * lineSegmentStartPoint + lineSegmentVertex * lineSegmentEndPoint;
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
         }
     |]
@@ -418,7 +433,8 @@ plainTriangleVertex :
             , sceneProperties : Mat4
             , triangleVertexPositions : Mat4
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 plainTriangleVertex =
     [glsl|
         precision highp float;
@@ -431,6 +447,8 @@ plainTriangleVertex =
         uniform highp mat4 projectionMatrix;
         uniform highp mat4 sceneProperties;
         uniform highp mat4 triangleVertexPositions;
+        
+        varying highp vec3 interpolatedPosition;
         
         void getTriangleVertex(int triangleVertexIndex, mat4 triangleVertexPositions, out vec3 position, out vec3 normal) {
             vec3 p1 = triangleVertexPositions[0].xyz;
@@ -453,6 +471,7 @@ plainTriangleVertex =
             vec3 normal = vec3(0.0, 0.0, 0.0);
             getTriangleVertex(int(triangleVertex), triangleVertexPositions, position, normal);
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
         }
     |]
@@ -471,7 +490,8 @@ plainQuadVertex :
             , sceneProperties : Mat4
             , quadVertexPositions : Mat4
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 plainQuadVertex =
     [glsl|
         precision highp float;
@@ -484,6 +504,8 @@ plainQuadVertex =
         uniform highp mat4 projectionMatrix;
         uniform highp mat4 sceneProperties;
         uniform highp mat4 quadVertexPositions;
+        
+        varying highp vec3 interpolatedPosition;
         
         void getQuadVertex(int quadVertexIndex, mat4 quadVertexPositions, out vec3 position, out vec3 normal, out vec4 tangent) {
             vec3 next = vec3(0.0, 0.0, 0.0);
@@ -523,6 +545,7 @@ plainQuadVertex =
             vec4 tangent = vec4(0.0, 0.0, 0.0, 0.0);
             getQuadVertex(int(quadVertex.z), quadVertexPositions, position, normal, tangent);
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
         }
     |]
@@ -541,7 +564,8 @@ unlitQuadVertex :
             , sceneProperties : Mat4
             , quadVertexPositions : Mat4
         }
-        { interpolatedUv : Vec2
+        { interpolatedPosition : Vec3
+        , interpolatedUv : Vec2
         }
 unlitQuadVertex =
     [glsl|
@@ -556,6 +580,7 @@ unlitQuadVertex =
         uniform highp mat4 sceneProperties;
         uniform highp mat4 quadVertexPositions;
         
+        varying highp vec3 interpolatedPosition;
         varying mediump vec2 interpolatedUv;
         
         void getQuadVertex(int quadVertexIndex, mat4 quadVertexPositions, out vec3 position, out vec3 normal, out vec4 tangent) {
@@ -596,6 +621,7 @@ unlitQuadVertex =
             vec4 tangent = vec4(0.0, 0.0, 0.0, 0.0);
             getQuadVertex(int(quadVertex.z), quadVertexPositions, position, normal, tangent);
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
             interpolatedUv = quadVertex.xy;
         }
@@ -874,7 +900,8 @@ pointVertex :
             , projectionMatrix : Mat4
             , sceneProperties : Mat4
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 pointVertex =
     [glsl|
         precision highp float;
@@ -888,6 +915,8 @@ pointVertex =
         uniform highp mat4 projectionMatrix;
         uniform highp mat4 sceneProperties;
         
+        varying highp vec3 interpolatedPosition;
+        
         vec4 getWorldPosition(vec3 modelPosition, vec4 modelScale, mat4 modelMatrix) {
             vec4 scaledPosition = vec4(modelScale.xyz * modelPosition, 1.0);
             return modelMatrix * scaledPosition;
@@ -895,6 +924,7 @@ pointVertex =
         
         void main () {
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
             float supersampling = sceneProperties[3][0];
             gl_PointSize = 2.0 * pointRadius * supersampling + 2.0;
@@ -1337,11 +1367,7 @@ sphereShadowVertex =
     |]
 
 
-shadowFragment :
-    WebGL.Shader
-        {}
-        uniforms
-        {}
+shadowFragment : WebGL.Shader {} uniforms {}
 shadowFragment =
     [glsl|
         precision lowp float;
@@ -1353,55 +1379,80 @@ shadowFragment =
 
 
 constantFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | constantColor : Vec4
+            , sceneProperties : Mat4
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 constantFragment =
     [glsl|
         precision lowp float;
         
         uniform lowp vec4 constantColor;
+        uniform highp mat4 sceneProperties;
+        
+        varying highp vec3 interpolatedPosition;
+        
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
         
         void main () {
-            gl_FragColor = constantColor;
+            gl_FragColor = applyFog(constantColor, interpolatedPosition, sceneProperties);
         }
     |]
 
 
 colorTextureFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | colorTexture : Texture
+            , sceneProperties : Mat4
         }
-        { interpolatedUv : Vec2
+        { interpolatedPosition : Vec3
+        , interpolatedUv : Vec2
         }
 colorTextureFragment =
     [glsl|
         precision mediump float;
         
         uniform mediump sampler2D colorTexture;
+        uniform highp mat4 sceneProperties;
         
+        varying highp vec3 interpolatedPosition;
         varying mediump vec2 interpolatedUv;
         
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
+        
         void main () {
-            gl_FragColor = texture2D(colorTexture, interpolatedUv);
+            gl_FragColor = applyFog(texture2D(colorTexture, interpolatedUv), interpolatedPosition, sceneProperties);
         }
     |]
 
 
 constantPointFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | constantColor : Vec4
             , pointRadius : Float
             , sceneProperties : Mat4
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 constantPointFragment =
     [glsl|
         precision lowp float;
@@ -1409,6 +1460,17 @@ constantPointFragment =
         uniform lowp vec4 constantColor;
         uniform lowp float pointRadius;
         uniform highp mat4 sceneProperties;
+        
+        varying highp vec3 interpolatedPosition;
+        
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
         
         float pointAlpha(float pointRadius, vec2 pointCoord) {
             float pointSize = 2.0 * pointRadius;
@@ -1429,25 +1491,36 @@ constantPointFragment =
         void main () {
             float supersampling = sceneProperties[3][0];
             float alpha = pointAlpha(pointRadius * supersampling, gl_PointCoord);
-            gl_FragColor = constantColor * alpha;
+            gl_FragColor = applyFog(constantColor * alpha, interpolationPosition, sceneProperties);
         }
     |]
 
 
 emissiveFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | emissiveColor : Vec4
             , sceneProperties : Mat4
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 emissiveFragment =
     [glsl|
         precision mediump float;
         
         uniform mediump vec4 emissiveColor;
         uniform highp mat4 sceneProperties;
+        
+        varying highp vec3 interpolatedPosition;
+        
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
         
         float gammaCorrect(float u) {
             if (u <= 0.0031308) {
@@ -1551,20 +1624,20 @@ emissiveFragment =
         }
         
         void main () {
-            gl_FragColor = toSrgb(emissiveColor, sceneProperties);
+            gl_FragColor = applyFog(toSrgb(emissiveColor, sceneProperties), interpolatedPosition, sceneProperties);
         }
     |]
 
 
 emissiveTextureFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | colorTexture : Texture
             , backlight : Float
             , sceneProperties : Mat4
         }
-        { interpolatedUv : Vec2
+        { interpolatedPosition : Vec3
+        , interpolatedUv : Vec2
         }
 emissiveTextureFragment =
     [glsl|
@@ -1574,7 +1647,17 @@ emissiveTextureFragment =
         uniform mediump float backlight;
         uniform highp mat4 sceneProperties;
         
+        varying highp vec3 interpolatedPosition;
         varying mediump vec2 interpolatedUv;
+        
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
         
         float inverseGamma(float u) {
             if (u <= 0.04045) {
@@ -1698,20 +1781,20 @@ emissiveTextureFragment =
         void main () {
             vec4 linearTextureColor = fromSrgb(texture2D(colorTexture, interpolatedUv));
             vec4 emissiveColor = vec4(linearTextureColor.rgb * backlight, linearTextureColor.a);
-            gl_FragColor = toSrgb(emissiveColor, sceneProperties);
+            gl_FragColor = applyFog(toSrgb(emissiveColor, sceneProperties), interpolatedPosition, sceneProperties);
         }
     |]
 
 
 emissivePointFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | emissiveColor : Vec4
             , pointRadius : Float
             , sceneProperties : Mat4
         }
-        {}
+        { interpolatedPosition : Vec3
+        }
 emissivePointFragment =
     [glsl|
         precision mediump float;
@@ -1719,6 +1802,17 @@ emissivePointFragment =
         uniform mediump vec4 emissiveColor;
         uniform lowp float pointRadius;
         uniform highp mat4 sceneProperties;
+        
+        varying highp vec3 interpolatedPosition;
+        
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
         
         float gammaCorrect(float u) {
             if (u <= 0.0031308) {
@@ -1841,14 +1935,13 @@ emissivePointFragment =
             vec4 color = toSrgb(emissiveColor, sceneProperties);
             float supersampling = sceneProperties[3][0];
             float alpha = pointAlpha(pointRadius * supersampling, gl_PointCoord);
-            gl_FragColor = color * alpha;
+            gl_FragColor = applyFog(color * alpha, interpolatedPosition, sceneProperties);
         }
     |]
 
 
 lambertianFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | sceneProperties : Mat4
             , lights12 : Mat4
@@ -1887,6 +1980,15 @@ lambertianFragment =
         const highp float kPi = 3.14159265359;
         const lowp float kDisabledLight = 0.0;
         const lowp float kSoftLighting = 3.0;
+        
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
         
         float getNormalSign() {
             return 2.0 * float(gl_FrontFacing) - 1.0;
@@ -2111,14 +2213,13 @@ lambertianFragment =
                 enabledLights
             );
         
-            gl_FragColor = toSrgb(vec4(linearColor, materialColor.a), sceneProperties);
+            gl_FragColor = applyFog(toSrgb(vec4(linearColor, materialColor.a), sceneProperties), interpolatedPosition, sceneProperties);
         }
     |]
 
 
 lambertianTextureFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | sceneProperties : Mat4
             , lights12 : Mat4
@@ -2169,6 +2270,15 @@ lambertianTextureFragment =
         const highp float kPi = 3.14159265359;
         const lowp float kDisabledLight = 0.0;
         const lowp float kSoftLighting = 3.0;
+        
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
         
         vec3 getLocalNormal(sampler2D normalMap, float normalMapType, vec2 uv) {
             if (normalMapType == 0.0) {
@@ -2443,14 +2553,13 @@ lambertianTextureFragment =
                 enabledLights
             );
         
-            gl_FragColor = toSrgb(vec4(linearColor, materialColor.a), sceneProperties);
+            gl_FragColor = applyFog(toSrgb(vec4(linearColor, materialColor.a), sceneProperties), interpolatedPosition, sceneProperties);
         }
     |]
 
 
 physicalFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | sceneProperties : Mat4
             , viewMatrix : Mat4
@@ -2494,6 +2603,15 @@ physicalFragment =
         const mediump float kMediumpFloatMax = 65504.0;
         const lowp float kDisabledLight = 0.0;
         const lowp float kSoftLighting = 3.0;
+        
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
         
         float getNormalSign() {
             return 2.0 * float(gl_FrontFacing) - 1.0;
@@ -2845,14 +2963,13 @@ physicalFragment =
                 enabledLights
             );
         
-            gl_FragColor = toSrgb(vec4(linearColor, baseColor.a), sceneProperties);
+            gl_FragColor = applyFog(toSrgb(vec4(linearColor, baseColor.a), sceneProperties), interpolatedPosition, sceneProperties);
         }
     |]
 
 
 physicalTexturesFragment :
-    WebGL.Shader
-        {}
+    WebGL.Shader {}
         { uniforms
             | sceneProperties : Mat4
             , viewMatrix : Mat4
@@ -2912,6 +3029,15 @@ physicalTexturesFragment =
         const mediump float kMediumpFloatMax = 65504.0;
         const lowp float kDisabledLight = 0.0;
         const lowp float kSoftLighting = 3.0;
+        
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+        
+            return mix(color, backgroundColor, fogRatio);
+        }
         
         float getFloatValue(sampler2D texture, vec2 uv, vec2 constantValue) {
             if (constantValue.y == 1.0) {
@@ -3317,6 +3443,6 @@ physicalTexturesFragment =
                 enabledLights
             );
         
-            gl_FragColor = toSrgb(vec4(linearColor, baseColor.a), sceneProperties);
+            gl_FragColor = applyFog(toSrgb(vec4(linearColor, baseColor.a), sceneProperties), interpolatedPosition, sceneProperties);
         }
     |]

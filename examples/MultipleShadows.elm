@@ -35,6 +35,7 @@ import Sphere3d
 import Task
 import Temperature
 import Viewpoint3d
+import Duration
 
 
 type WorldCoordinates
@@ -48,6 +49,7 @@ type alias Model =
     , orbiting : Bool
     , azimuth : Angle
     , elevation : Angle
+    , cameraDistance: Float
     }
 
 
@@ -78,6 +80,7 @@ init () =
       , orbiting = False
       , azimuth = Angle.degrees -90
       , elevation = Angle.degrees 30
+      , cameraDistance = 1
       }
     , Task.perform
         (\{ viewport } ->
@@ -97,7 +100,7 @@ update message model =
             ( { model | width = width, height = height }, Cmd.none )
 
         Tick elapsed ->
-            ( { model | elapsedTime = model.elapsedTime |> Quantity.plus elapsed }, Cmd.none )
+            ( { model | elapsedTime = model.elapsedTime |> Quantity.plus elapsed, cameraDistance = model.cameraDistance + (Duration.inMilliseconds elapsed) * 0.001 }, Cmd.none )
 
         MouseDown ->
             ( { model | orbiting = True }, Cmd.none )
@@ -314,7 +317,7 @@ view model =
                         { focalPoint = Point3d.centimeters 0 0 20
                         , azimuth = model.azimuth
                         , elevation = model.elevation
-                        , distance = Length.meters 3
+                        , distance = Length.meters model.cameraDistance
                         }
                 , verticalFieldOfView = Angle.degrees 30
                 }
@@ -328,6 +331,7 @@ view model =
         , whiteBalance = Light.fluorescent
         , antialiasing = Scene3d.multisampling
         , dimensions = ( model.width, model.height )
-        , background = Scene3d.backgroundColor Color.lightBlue
+        , background = Scene3d.backgroundColor Color.white
         , entities = [ plane, firstBox, secondBox, firstLightBall, secondLightBall ]
+        , visibility = Scene3d.fog (Length.meters 4)
         }

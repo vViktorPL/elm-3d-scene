@@ -1218,6 +1218,19 @@ perpendicularTo =
         }
         """
 
+applyFog : Glsl.Function
+applyFog =
+    Glsl.function { dependencies = [], constants = [] }
+        """
+        vec4 applyFog(vec4 color, vec3 interpolatedPosition, mat4 sceneProperties) {
+            vec3 cameraPoint = sceneProperties[1].xyz;
+            vec4 backgroundColor = vec4(sceneProperties[0].xyz, 1.0);
+            float distanceFromCamera = length(cameraPoint - interpolatedPosition);
+            float fogRatio = sign(sceneProperties[0].w) * clamp((distanceFromCamera - sceneProperties[0].w) * 0.1, 0.0, 1.0);
+
+            return mix(color, backgroundColor, fogRatio);
+        }
+        """
 
 
 ---------- VERTEX SHADERS ----------
@@ -1228,13 +1241,14 @@ plainVertexShader =
     Glsl.vertexShader "plainVertex"
         { attributes = [ position ]
         , uniforms = [ modelScale, modelMatrix, viewMatrix, projectionMatrix, sceneProperties ]
-        , varyings = []
+        , varyings = [ interpolatedPosition ]
         , constants = []
         , functions = [ getWorldPosition ]
         }
         """
         void main () {
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
         }
         """
@@ -1245,13 +1259,14 @@ unlitVertexShader =
     Glsl.vertexShader "unlitVertex"
         { attributes = [ position, uv ]
         , uniforms = [ modelScale, modelMatrix, viewMatrix, projectionMatrix, sceneProperties ]
-        , varyings = [ interpolatedUv ]
+        , varyings = [ interpolatedPosition, interpolatedUv ]
         , constants = []
         , functions = [ getWorldPosition ]
         }
         """
         void main() {
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
             interpolatedUv = uv;
         }
@@ -1342,7 +1357,7 @@ lineSegmentVertexShader =
             , lineSegmentStartPoint
             , lineSegmentEndPoint
             ]
-        , varyings = []
+        , varyings = [interpolatedPosition]
         , constants = []
         , functions = [ getWorldPosition ]
         }
@@ -1350,6 +1365,7 @@ lineSegmentVertexShader =
         void main() {
             vec3 position = (1.0 - lineSegmentVertex) * lineSegmentStartPoint + lineSegmentVertex * lineSegmentEndPoint;
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
         }
         """
@@ -1367,7 +1383,7 @@ plainTriangleVertexShader =
             , sceneProperties
             , triangleVertexPositions
             ]
-        , varyings = []
+        , varyings = [interpolatedPosition]
         , constants = []
         , functions = [ getTriangleVertex, getWorldPosition ]
         }
@@ -1377,6 +1393,7 @@ plainTriangleVertexShader =
             vec3 normal = vec3(0.0, 0.0, 0.0);
             getTriangleVertex(int(triangleVertex), triangleVertexPositions, position, normal);
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
         }
         """
@@ -1394,7 +1411,7 @@ plainQuadVertexShader =
             , sceneProperties
             , quadVertexPositions
             ]
-        , varyings = []
+        , varyings = [interpolatedPosition]
         , constants = []
         , functions = [ getQuadVertex, getWorldPosition ]
         }
@@ -1405,6 +1422,7 @@ plainQuadVertexShader =
             vec4 tangent = vec4(0.0, 0.0, 0.0, 0.0);
             getQuadVertex(int(quadVertex.z), quadVertexPositions, position, normal, tangent);
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
         }
         """
@@ -1422,7 +1440,7 @@ unlitQuadVertexShader =
             , sceneProperties
             , quadVertexPositions
             ]
-        , varyings = [ interpolatedUv ]
+        , varyings = [ interpolatedPosition, interpolatedUv ]
         , constants = []
         , functions = [ getQuadVertex, getWorldPosition ]
         }
@@ -1433,6 +1451,7 @@ unlitQuadVertexShader =
             vec4 tangent = vec4(0.0, 0.0, 0.0, 0.0);
             getQuadVertex(int(quadVertex.z), quadVertexPositions, position, normal, tangent);
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
             interpolatedUv = quadVertex.xy;
         }
@@ -1543,7 +1562,7 @@ singlePointVertexShader =
             , sceneProperties
             , pointPosition
             ]
-        , varyings = []
+        , varyings = [ interpolatedPosition ]
         , constants = []
         , functions = [ getWorldPosition ]
         }
@@ -1554,6 +1573,7 @@ singlePointVertexShader =
         """
         void main () {
             vec4 worldPosition = getWorldPosition(pointPosition, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
             float supersampling = sceneProperties[3][0];
             gl_PointSize = 2.0 * pointRadius * supersampling * dummyAttribute + 2.0;
@@ -1566,13 +1586,14 @@ pointVertexShader =
     Glsl.vertexShader "pointVertex"
         { attributes = [ position ]
         , uniforms = [ modelScale, modelMatrix, pointRadius, viewMatrix, projectionMatrix, sceneProperties ]
-        , varyings = []
+        , varyings = [interpolatedPosition]
         , constants = []
         , functions = [ getWorldPosition ]
         }
         """
         void main () {
             vec4 worldPosition = getWorldPosition(position, modelScale, modelMatrix);
+            interpolatedPosition = worldPosition.xyz;
             gl_Position = projectionMatrix * (viewMatrix * worldPosition);
             float supersampling = sceneProperties[3][0];
             gl_PointSize = 2.0 * pointRadius * supersampling + 2.0;
@@ -1756,14 +1777,14 @@ constantFragmentShader : Glsl.Shader
 constantFragmentShader =
     Glsl.fragmentShader "constantFragment"
         { precision = Glsl.lowp
-        , uniforms = [ constantColor ]
+        , uniforms = [ constantColor, sceneProperties ]
         , constants = []
-        , varyings = []
-        , functions = []
+        , varyings = [interpolatedPosition]
+        , functions = [applyFog]
         }
         """
         void main () {
-            gl_FragColor = constantColor;
+            gl_FragColor = applyFog(constantColor, interpolatedPosition, sceneProperties);
         }
         """
 
@@ -1772,14 +1793,14 @@ colorTextureFragmentShader : Glsl.Shader
 colorTextureFragmentShader =
     Glsl.fragmentShader "colorTextureFragment"
         { precision = Glsl.mediump
-        , uniforms = [ colorTexture ]
+        , uniforms = [ colorTexture, sceneProperties ]
         , constants = []
-        , varyings = [ interpolatedUv ]
-        , functions = []
+        , varyings = [ interpolatedPosition, interpolatedUv ]
+        , functions = [applyFog]
         }
         """
         void main () {
-            gl_FragColor = texture2D(colorTexture, interpolatedUv);
+            gl_FragColor = applyFog(texture2D(colorTexture, interpolatedUv), interpolatedPosition, sceneProperties);
         }
         """
 
@@ -1790,14 +1811,14 @@ constantPointFragmentShader =
         { precision = Glsl.lowp
         , uniforms = [ constantColor, pointRadius, sceneProperties ]
         , constants = []
-        , varyings = []
-        , functions = [ pointAlpha ]
+        , varyings = [interpolatedPosition]
+        , functions = [ applyFog, pointAlpha ]
         }
         """
         void main () {
             float supersampling = sceneProperties[3][0];
             float alpha = pointAlpha(pointRadius * supersampling, gl_PointCoord);
-            gl_FragColor = constantColor * alpha;
+            gl_FragColor = applyFog(constantColor * alpha, interpolationPosition, sceneProperties);
         }
         """
 
@@ -1808,12 +1829,12 @@ emissiveFragmentShader =
         { precision = Glsl.mediump
         , uniforms = [ emissiveColor, sceneProperties ]
         , constants = []
-        , varyings = []
-        , functions = [ toSrgb ]
+        , varyings = [interpolatedPosition]
+        , functions = [ applyFog, toSrgb ]
         }
         """
         void main () {
-            gl_FragColor = toSrgb(emissiveColor, sceneProperties);
+            gl_FragColor = applyFog(toSrgb(emissiveColor, sceneProperties), interpolatedPosition, sceneProperties);
         }
         """
 
@@ -1823,15 +1844,15 @@ emissiveTextureFragmentShader =
     Glsl.fragmentShader "emissiveTextureFragment"
         { precision = Glsl.mediump
         , uniforms = [ colorTexture, backlight, sceneProperties ]
-        , varyings = [ interpolatedUv ]
+        , varyings = [ interpolatedPosition, interpolatedUv ]
         , constants = []
-        , functions = [ fromSrgb, toSrgb ]
+        , functions = [ applyFog, fromSrgb, toSrgb ]
         }
         """
         void main () {
             vec4 linearTextureColor = fromSrgb(texture2D(colorTexture, interpolatedUv));
             vec4 emissiveColor = vec4(linearTextureColor.rgb * backlight, linearTextureColor.a);
-            gl_FragColor = toSrgb(emissiveColor, sceneProperties);
+            gl_FragColor = applyFog(toSrgb(emissiveColor, sceneProperties), interpolatedPosition, sceneProperties);
         }
         """
 
@@ -1841,8 +1862,8 @@ emissivePointFragmentShader =
     Glsl.fragmentShader "emissivePointFragment"
         { precision = Glsl.mediump
         , uniforms = [ emissiveColor, pointRadius, sceneProperties ]
-        , varyings = []
-        , functions = [ toSrgb, pointAlpha ]
+        , varyings = [interpolatedPosition]
+        , functions = [ applyFog, toSrgb, pointAlpha ]
         , constants = []
         }
         """
@@ -1850,7 +1871,7 @@ emissivePointFragmentShader =
             vec4 color = toSrgb(emissiveColor, sceneProperties);
             float supersampling = sceneProperties[3][0];
             float alpha = pointAlpha(pointRadius * supersampling, gl_PointCoord);
-            gl_FragColor = color * alpha;
+            gl_FragColor = applyFog(color * alpha, interpolatedPosition, sceneProperties);
         }
         """
 
@@ -1873,7 +1894,8 @@ lambertianFragmentShader =
         , varyings = [ interpolatedPosition, interpolatedNormal ]
         , constants = []
         , functions =
-            [ getNormalSign
+            [ applyFog
+            , getNormalSign
             , getDirectionToCamera
             , lambertianLighting
             , toSrgb
@@ -1896,7 +1918,7 @@ lambertianFragmentShader =
                 enabledLights
             );
 
-            gl_FragColor = toSrgb(vec4(linearColor, materialColor.a), sceneProperties);
+            gl_FragColor = applyFog(toSrgb(vec4(linearColor, materialColor.a), sceneProperties), interpolatedPosition, sceneProperties);
         }
         """
 
@@ -1923,7 +1945,8 @@ lambertianTextureFragmentShader =
         , varyings = [ interpolatedPosition, interpolatedNormal, interpolatedUv, interpolatedTangent ]
         , constants = []
         , functions =
-            [ getLocalNormal
+            [ applyFog
+            , getLocalNormal
             , getNormalSign
             , getMappedNormal
             , getFloatValue
@@ -1956,7 +1979,7 @@ lambertianTextureFragmentShader =
                 enabledLights
             );
 
-            gl_FragColor = toSrgb(vec4(linearColor, materialColor.a), sceneProperties);
+            gl_FragColor = applyFog(toSrgb(vec4(linearColor, materialColor.a), sceneProperties), interpolatedPosition, sceneProperties);
         }
         """
 
@@ -1980,7 +2003,8 @@ physicalFragmentShader =
             ]
         , varyings = [ interpolatedPosition, interpolatedNormal ]
         , functions =
-            [ getNormalSign
+            [ applyFog
+            , getNormalSign
             , getDirectionToCamera
             , physicalLighting
             , toSrgb
@@ -2008,7 +2032,7 @@ physicalFragmentShader =
                 enabledLights
             );
 
-            gl_FragColor = toSrgb(vec4(linearColor, baseColor.a), sceneProperties);
+            gl_FragColor = applyFog(toSrgb(vec4(linearColor, baseColor.a), sceneProperties), interpolatedPosition, sceneProperties);
         }
         """
 
@@ -2043,7 +2067,8 @@ physicalTexturesFragmentShader =
             , interpolatedTangent
             ]
         , functions =
-            [ getFloatValue
+            [ applyFog
+            , getFloatValue
             , getLocalNormal
             , getNormalSign
             , getMappedNormal
@@ -2085,7 +2110,7 @@ physicalTexturesFragmentShader =
                 enabledLights
             );
 
-            gl_FragColor = toSrgb(vec4(linearColor, baseColor.a), sceneProperties);
+            gl_FragColor = applyFog(toSrgb(vec4(linearColor, baseColor.a), sceneProperties), interpolatedPosition, sceneProperties);
         }
         """
 
