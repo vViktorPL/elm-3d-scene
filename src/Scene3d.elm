@@ -18,7 +18,7 @@ module Scene3d exposing
     , placeIn, relativeTo
     , triangleShadow, quadShadow, blockShadow, sphereShadow, cylinderShadow, coneShadow, meshShadow
     , composite, toWebGLEntities
-    , clearView, fog
+    , Visibility, clearView, fog
     )
 
 {-| Top-level functionality for rendering a 3D scene.
